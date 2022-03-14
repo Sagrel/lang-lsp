@@ -1,4 +1,4 @@
-use lang::tokenizer::{Span, Token};
+use lang_frontend::tokenizer::{Span, Token};
 use ropey::Rope;
 use tower_lsp::lsp_types::{SemanticToken, SemanticTokenType};
 

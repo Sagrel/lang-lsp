@@ -302,7 +302,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
-name = "lang"
+name = "lang-frontend"
 version = "0.1.0"
 dependencies = [
  "ariadne",
@@ -317,7 +317,7 @@ dependencies = [
  "dashmap",
  "env_logger",
  "im-rc",
- "lang",
+ "lang-frontend",
  "log",
  "ropey",
  "serde",

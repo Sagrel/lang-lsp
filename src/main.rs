@@ -1,19 +1,18 @@
 use std::collections::HashMap;
 
-extern crate lang;
-use chumsky::Parser;
+extern crate lang_frontend;
 use dashmap::DashMap;
-use lang::*;
 
 mod semantic_tokens;
-use lang::ast::{Ast, Spanned};
-use lang::inferer::Type;
-use lang::tokenizer::{Span, Token};
+use lang_frontend::*;
+use lang_frontend::ast::{Ast, Spanned};
+use lang_frontend::inferer::Type;
+use lang_frontend::tokenizer::{Span, Token};
 use ropey::Rope;
 use semantic_tokens::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tower_lsp::jsonrpc::{Result, self, ErrorCode};
+use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::Notification;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
