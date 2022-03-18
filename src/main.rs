@@ -3,15 +3,17 @@ use std::collections::HashMap;
 extern crate lang_frontend;
 use dashmap::DashMap;
 
+mod inlay_hints;
 mod semantic_tokens;
-use lang_frontend::*;
-use lang_frontend::ast::{Ast, Spanned};
+use inlay_hints::get_inlay_hints;
+use lang_frontend::ast::{Ast, Declaration, Spanned};
 use lang_frontend::inferer::Type;
 use lang_frontend::tokenizer::{Span, Token};
+use lang_frontend::*;
 use ropey::Rope;
 use semantic_tokens::*;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::Notification;
 use tower_lsp::lsp_types::*;
@@ -40,32 +42,6 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
-                // Quiero proporcionar autocompletado cuando de pulse .
-                /*
-                completion_provider: Some(CompletionOptions {
-                    resolve_provider: Some(false),
-                    trigger_characters: Some(vec![".".to_string()]),
-                    work_done_progress_options: Default::default(),
-                    all_commit_characters: None,
-                }),
-                */
-                // Ni idea TODO probar a quitarlo a ver que pasa
-                /*
-                execute_command_provider: Some(ExecuteCommandOptions {
-                    commands: vec!["dummy.do_something".to_string()],
-                    work_done_progress_options: Default::default(),
-                }),
-                */
-                // Configuramos para que podamos funcionar con workspaces
-                /* 
-                workspace: Some(WorkspaceServerCapabilities {
-                    workspace_folders: Some(WorkspaceFoldersServerCapabilities {
-                        supported: Some(true),
-                        change_notifications: Some(OneOf::Left(true)),
-                    }),
-                    file_operations: None,
-                }),
-                */
                 // Configuramos los colorcitos de los tokens
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
@@ -74,7 +50,7 @@ impl LanguageServer for Backend {
                                 TextDocumentRegistrationOptions {
                                     // Queremos que funcione en los archivos terminados en "language"?
                                     document_selector: Some(vec![DocumentFilter {
-                                        language: Some("nrs".to_string()),
+                                        language: Some("lang".to_string()),
                                         scheme: Some("file".to_string()),
                                         pattern: None,
                                     }]),
@@ -96,10 +72,6 @@ impl LanguageServer for Backend {
                     ),
                 ),
                 // Estas son las otras capacidades que tiene nuesto servidor
-                // definition: Some(GotoCapability::default()),
-                //definition_provider: Some(OneOf::Left(true)),
-                //references_provider: Some(OneOf::Left(true)),
-                //rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -161,20 +133,6 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn execute_command(&self, _: ExecuteCommandParams) -> Result<Option<Value>> {
-        self.client
-            .log_message(MessageType::INFO, "command executed!")
-            .await;
-
-        match self.client.apply_edit(WorkspaceEdit::default()).await {
-            Ok(res) if res.applied => self.client.log_message(MessageType::INFO, "applied").await,
-            Ok(_) => self.client.log_message(MessageType::INFO, "rejected").await,
-            Err(err) => self.client.log_message(MessageType::ERROR, err).await,
-        }
-
-        Ok(None)
-    }
-
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.client
             .log_message(MessageType::INFO, "file opened!")
@@ -226,30 +184,38 @@ struct TextDocumentItem {
 }
 impl Backend {
     async fn inlay_hint(&self, params: InlayHintParams) -> Result<Vec<(usize, usize, String)>> {
-        let mut hashmap = HashMap::new();
-        // TODO update this
+        let mut hints = HashMap::new();
+        // TODO update this for new declarations so we actually put the inlay hints in the correct places and only when needed
         if let Some(entry) = self.ast_map.get(&params.path) {
             let ast = &entry.0;
             let type_table = &entry.1;
-            ast.iter().for_each(|(node, _, _)| {
-                if let Ast::Binary(l, ":=", _) = node {
-                    if let (Ast::Variable(_), span, t) = l.as_ref() {
-                        let new_t = match t.clone().unwrap() {
-                            Type::T(n) => type_table[n].clone(),
-                            x => x,
-                        };
-                        hashmap.insert(span.clone(), new_t);
-                    }
-                }
-            });
-        }
 
-        let inlay_hint_list = hashmap
-            .into_iter()
-            .map(|(k, v)| (k.start, k.end, format!("{:?}", v)))
-            .collect::<Vec<_>>();
-        Ok(inlay_hint_list)
+            for node in ast {
+                get_inlay_hints(node, &mut hints);
+            }
+            let inlay_hint_list = hints
+                .into_iter()
+                .map(|(k, t)| {
+                    (
+                        k.start,
+                        k.end,
+                        format!(
+                            "{:?}",
+                            match t {
+                                Type::T(n) => type_table[n].clone(),
+                                x => x,
+                            }
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>();
+            Ok(inlay_hint_list)
+        } else {
+            Ok(Vec::new())
+        }
     }
+
+    // TODO be more error resilient
     async fn on_change(&self, params: TextDocumentItem) {
         // Añadimos el contenido del archivo a nuestro document_map
         let rope = ropey::Rope::from_str(&params.text);
@@ -335,6 +301,7 @@ async fn main() {
     Server::new(stdin, stdout, socket).serve(service).await;
 }
 
+// TODO I don't like this, can we not use ropes? I don't think we are using them right any way
 fn offset_to_position(offset: usize, rope: &Rope) -> Option<Position> {
     let line = rope.try_char_to_line(offset).ok()?;
     let first_char = rope.try_line_to_char(line).ok()?;

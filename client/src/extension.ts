@@ -63,7 +63,7 @@ export async function activate(context: ExtensionContext) {
   // Options to control the language client
   let clientOptions: LanguageClientOptions = {
     // Register the server for plain text documents
-    documentSelector: [{ scheme: "file", language: "nrs" }],
+    documentSelector: [{ scheme: "file", language: "lang" }],
     synchronize: {
       // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -72,7 +72,7 @@ export async function activate(context: ExtensionContext) {
   };
 
   // Create the language client and start the client.
-  client = new LanguageClient("nrs-language-server", "nrs language server", serverOptions, clientOptions);
+  client = new LanguageClient("lang-lsp", "lang lsp", serverOptions, clientOptions);
   activateInlayHints(context);
   client.start();
 }
@@ -94,7 +94,7 @@ export function activateInlayHints(ctx: ExtensionContext) {
 
       const event = this.updateHintsEventEmitter.event;
       this.hintsProvider = languages.registerInlayHintsProvider(
-        { scheme: "file", language: "nrs" },
+        { scheme: "file", language: "lang" },
         new (class implements InlayHintsProvider {
           onDidChangeInlayHints = event;
           resolveInlayHint(hint: InlayHint, token: CancellationToken): ProviderResult<InlayHint> {

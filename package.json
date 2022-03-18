@@ -1,6 +1,6 @@
 {
-  "name": "nrs-language-server",
-  "description": "nano rust language server",
+  "name": "lang-lsp",
+  "description": "language server",
   "license": "MIT",
   "version": "1.5.0",
   "categories": [],
@@ -13,21 +13,21 @@
   },
   "enabledApiProposals": [],
   "activationEvents": [
-    "onLanguage:nrs"
+    "onLanguage:lang"
   ],
   "main": "./client/out/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "nrs",
-        "extensions": [".nrs"]
+        "id": "lang",
+        "extensions": [".lang"]
       }
     ],
     "configuration": {
       "type": "object",
-      "title": "nrs-language-server",
+      "title": "lang-lsp",
       "properties": {
-        "nrs-language-server.trace.server": {
+        "lang-lap.server": {
           "type": "string",
           "scope": "window",
           "enum": [
