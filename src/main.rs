@@ -7,8 +7,9 @@ mod inlay_hints;
 mod semantic_tokens;
 use inlay_hints::get_inlay_hints;
 use lang_frontend::ast::{Ast, Declaration, Spanned};
-use lang_frontend::inferer::Type;
+use lang_frontend::inferer::Inferer;
 use lang_frontend::tokenizer::{Span, Token};
+use lang_frontend::types::Type;
 use lang_frontend::*;
 use ropey::Rope;
 use semantic_tokens::*;
@@ -198,14 +199,8 @@ impl Backend {
                 .map(|(k, t)| {
                     (
                         k.start,
-                        k.end,
-                        format!(
-                            "{:?}",
-                            match t {
-                                Type::T(n) => type_table[n].clone(),
-                                x => x,
-                            }
-                        ),
+                        k.start + 1,
+                        Inferer::get_most_concrete_type(&t, type_table).to_string(),
                     )
                 })
                 .collect::<Vec<_>>();

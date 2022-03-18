@@ -1,11 +1,11 @@
-use lang_frontend::{ast::*, inferer::Type, tokenizer::Span};
+use lang_frontend::{ast::*, tokenizer::Span, types::Type};
 use std::collections::HashMap;
 
 pub fn get_inlay_hints(node: &Spanned<Ast>, hints: &mut HashMap<Span, Type>) {
     match &node.0 {
         Ast::Declaration(_, variant) => {
-            if let Declaration::OnlyValue(value) = variant.as_ref() {
-                let (_, span, t) = value;
+            if let Declaration::OnlyValue(value, span) = variant.as_ref() {
+                let (_, _, t) = value;
                 hints.insert(span.clone(), t.clone().unwrap());
                 get_inlay_hints(value, hints);
             }
