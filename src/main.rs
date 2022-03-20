@@ -225,9 +225,9 @@ struct TextDocumentItem {
     version: i32,
 }
 impl Backend {
+    // TODO why does it only work after we modify the code the first time?
     async fn inlay_hint(&self, params: InlayHintParams) -> Result<Vec<(usize, usize, String)>> {
         let mut hints = HashMap::new();
-        // TODO update this for new declarations so we actually put the inlay hints in the correct places and only when needed
         if let Some(entry) = self.ast_map.get(&params.path) {
             let ast = &entry.0;
             let type_table = &entry.1;
@@ -251,7 +251,7 @@ impl Backend {
         }
     }
 
-    // TODO be more error resilient
+    // TODO be more error resilient to fucked AST
     async fn on_change(&self, params: TextDocumentItem) {
         // Añadimos el contenido del archivo a nuestro document_map
         let rope = ropey::Rope::from_str(&params.text);

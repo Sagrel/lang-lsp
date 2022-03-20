@@ -23,8 +23,8 @@ pub fn make_tokens_semantic(tokens: &[(Token, Span)], rope: &Rope) -> Vec<Semant
         .filter_map(|(token, span)| {
             // Calculamos el tipo de token
             let token_type = match token {
-                Token::Num(_) => SemanticTokenType::NUMBER,
-                Token::Str(_) => SemanticTokenType::STRING,
+                Token::Number(_) => SemanticTokenType::NUMBER,
+                Token::Text(_) => SemanticTokenType::STRING,
                 Token::Op(_) => SemanticTokenType::OPERATOR,
                 Token::Ctrl(_) => return None,
                 Token::Ident(_) => SemanticTokenType::VARIABLE,
