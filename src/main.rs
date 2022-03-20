@@ -3,6 +3,7 @@ use std::collections::HashMap;
 extern crate lang_frontend;
 use dashmap::DashMap;
 
+mod hover;
 mod inlay_hints;
 mod semantic_tokens;
 use inlay_hints::get_inlay_hints;
@@ -79,7 +80,44 @@ impl LanguageServer for Backend {
         })
     }
 
-    
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let params = params.text_document_position_params;
+        // El path
+        let uri = params.text_document.uri.to_string();
+        // Un pequeño mensaje al cliente
+        self.client.log_message(MessageType::LOG, "hovering").await;
+
+        let rope = if let Some(entry) = self.document_map.get(&uri) {
+            entry.value().clone()
+        } else {
+            return Ok(None);
+        };
+
+        let (ast, type_table) = if let Some(entry) = self.ast_map.get(&uri) {
+            entry.value().clone() // SPEED dont clone
+        } else {
+            return Ok(None);
+        };
+
+        let pos = params.position;
+
+        let char = rope.try_line_to_char(pos.line as usize).unwrap_or(0);
+        let offset = char + pos.character as usize;
+
+        for declaration in ast.iter() {
+            if let Some(t) = hover::find_match(declaration, offset) {
+                return Ok(Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(format!(
+                        "Type: {}",
+                        Inferer::get_most_concrete_type(&t, &type_table)
+                    ))),
+                    range: None,
+                }));
+            }
+        }
+
+        Ok(None)
+    }
 
     // Genera una lista de Token dado un Path
     async fn semantic_tokens_full(
