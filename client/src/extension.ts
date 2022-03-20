@@ -24,6 +24,7 @@ import {
   TextDocumentChangeEvent,
   Position,
   InlayHintLabelPart,
+  Hover,
   Location,
   ProviderResult,
 } from "vscode";
@@ -42,8 +43,8 @@ let client: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
 
-  const traceOutputChannel = window.createOutputChannel("Nrs Language Server trace");
-  const command = process.env.SERVER_PATH || "nrs-language-server";
+  const traceOutputChannel = window.createOutputChannel("Language Server trace");
+  const command = process.env.SERVER_PATH || "lang-lsp";
   const run: Executable = {
     command,
     options: {
@@ -121,6 +122,7 @@ export function activateInlayHints(ctx: ExtensionContext) {
                 return {
                   position: endPosition,
                   paddingLeft: true,
+                  paddingRight: true,
                   label: [
                     {
                       value: label,

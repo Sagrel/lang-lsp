@@ -6,7 +6,7 @@ use dashmap::DashMap;
 mod inlay_hints;
 mod semantic_tokens;
 use inlay_hints::get_inlay_hints;
-use lang_frontend::ast::{Ast, Declaration, Spanned};
+use lang_frontend::ast::{Ast, Spanned};
 use lang_frontend::inferer::Inferer;
 use lang_frontend::tokenizer::{Span, Token};
 use lang_frontend::types::Type;
@@ -43,6 +43,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 // Configuramos los colorcitos de los tokens
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
@@ -77,6 +78,8 @@ impl LanguageServer for Backend {
             },
         })
     }
+
+    
 
     // Genera una lista de Token dado un Path
     async fn semantic_tokens_full(
