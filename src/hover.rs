@@ -1,14 +1,14 @@
 use lang_frontend::{
-    ast::{Ast, Spanned},
+    ast::{Ast, Anotated},
     types::Type,
 };
 
-pub fn find_match(node: &Spanned<Ast>, pos: usize) -> Option<Type> {
+pub fn find_match(node: &Anotated<Ast>, pos: usize) -> Option<Type> {
     if node.1.contains(&pos) {
         match &node.0 {
             Ast::Error | Ast::Literal(_) | Ast::Variable(_) => node.2.clone(),
-            Ast::Declaration(name, variant) => {
-                let wants_all = node.1.start + name.len() > pos;
+            Ast::Declaration((_, span), variant) => {
+                let wants_all = node.1.start + span.len() > pos;
 
                 match variant.as_ref() {
                     lang_frontend::ast::Declaration::Complete(ty, val) => {
@@ -55,7 +55,7 @@ pub fn find_match(node: &Spanned<Ast>, pos: usize) -> Option<Type> {
                 }
                 node.2.clone()
             }
-            Ast::While(cond, body) => {
+            Ast::While(_, cond, body) => {
                 if let Some(t) = find_match(cond, pos) {
                     return Some(t);
                 }
@@ -64,7 +64,7 @@ pub fn find_match(node: &Spanned<Ast>, pos: usize) -> Option<Type> {
                 }
                 node.2.clone()
             }
-            Ast::If(cond, if_body, else_body) => {
+            Ast::If(_, cond, if_body, _, else_body) => {
                 if let Some(t) = find_match(cond, pos) {
                     return Some(t);
                 }
@@ -92,7 +92,7 @@ pub fn find_match(node: &Spanned<Ast>, pos: usize) -> Option<Type> {
                 }
                 node.2.clone()
             }
-            Ast::Lambda(args, ret) => {
+            Ast::Lambda(args,_, ret) => {
                 for arg in args {
                     if let Some(t) = find_match(arg, pos) {
                         return Some(t);

@@ -7,11 +7,13 @@ mod hover;
 mod inlay_hints;
 mod semantic_tokens;
 use inlay_hints::get_inlay_hints;
-use lang_frontend::ast::{Ast, Spanned};
 use lang_frontend::inferer::Inferer;
-use lang_frontend::tokenizer::{Span, Token};
 use lang_frontend::types::Type;
 use lang_frontend::*;
+use lang_frontend::{
+    ast::{Anotated, Ast},
+    token::{Spanned, Token},
+};
 use ropey::Rope;
 use semantic_tokens::*;
 use serde::{Deserialize, Serialize};
@@ -26,11 +28,11 @@ struct Backend {
     // Una referencia al cliente que nos permite pasarle mensajes
     client: Client,
     // Un HashMap de Path -> Modulo
-    ast_map: DashMap<String, (Vec<Spanned<Ast>>, Vec<Type>)>,
+    ast_map: DashMap<String, (Vec<Anotated<Ast>>, Vec<Type>)>,
     // Un HashMap de Path -> Source (Rope es un String que se puede modificar rapido)
     document_map: DashMap<String, Rope>,
     // Un HashMap de Path -> Lista de Tokens
-    token_map: DashMap<String, Vec<(Token, Span)>>,
+    token_map: DashMap<String, Vec<Spanned<Token>>>,
 }
 
 #[tower_lsp::async_trait]
@@ -131,14 +133,25 @@ impl LanguageServer for Backend {
             .log_message(MessageType::LOG, "semantic_token_full")
             .await;
 
-        // Aqui es donde creamos los SemanticToken, que son basicamente la posicion y el tipo de Token
+        let rope = if let Some(entry) = self.document_map.get(&uri) {
+            entry.value().clone()
+        } else {
+            return Ok(None);
+        };
 
-        // Cargamos el texto del archivo que nos diga el path
-        let rope = self.document_map.get(&uri).unwrap();
-        // Generamos los tokens del archivo
-        //let tokens = tokenizer::tokenizer().parse(rope.to_string()).unwrap();
-        let tokens = self.token_map.get(&uri).expect("Fuck, we have no tokens");
-        // Transformamos los (Token, Span) en SemanticToken
+        let (ast, type_table) = if let Some(entry) = self.ast_map.get(&uri) {
+            entry.value().clone() // SPEED dont clone
+        } else {
+            return Ok(None);
+        };
+
+        // TODO add the tokens corresponding to comments some how
+        let mut tokens = Vec::new();
+        for node in &ast {
+            make_tokens_of_ast(node, &type_table, &mut tokens);
+        }
+        // TODO make_tokens_semantic relies on the tokens being ordered. Fix that some how
+        tokens.sort_by(|(_, a), (_, b)| a.start.cmp(&b.start));
         let semantic_tokens = make_tokens_semantic(&tokens, &rope);
 
         Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
