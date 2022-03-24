@@ -139,6 +139,9 @@ pub fn make_tokens_of_ast(
             }
             make_tokens_of_ast(body, type_table, tokens);
         }
+        Coment((_, span)) => {
+            tokens.push((SemanticTokenType::COMMENT, span.clone()));
+        }
         _ => panic!("Yo WTF?"),
     }
 }

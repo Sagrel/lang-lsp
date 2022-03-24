@@ -103,6 +103,7 @@ pub fn find_match(node: &Anotated<Ast>, pos: usize) -> Option<Type> {
                 }
                 node.2.clone()
             }
+            Ast::Coment(_) => None,
         }
     } else {
         None
