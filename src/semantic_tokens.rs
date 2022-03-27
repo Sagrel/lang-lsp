@@ -1,9 +1,4 @@
-use lang_frontend::{
-    ast::{self, *},
-    inferer::Inferer,
-    token::*,
-    types::Type,
-};
+use lang_frontend::{ast::*, inferer::Inferer, token::*, types::Type};
 use ropey::Rope;
 use tower_lsp::lsp_types::{SemanticToken, SemanticTokenType};
 
@@ -57,7 +52,7 @@ pub fn make_tokens_semantic(
         .collect()
 }
 
-// TODO keep that of scoping so we can know when a variable is a parameter
+// TODO keep info of scoping so we can know when a variable is a parameter and mark it as such
 pub fn make_tokens_of_ast(
     node: &Anotated<Ast>,
     type_table: &[Type],
@@ -80,17 +75,17 @@ pub fn make_tokens_of_ast(
                 tokens.push((SemanticTokenType::VARIABLE, span.clone()))
             }
         }
-        Declaration((_, span), variant) => {
-            // TODO Handle all variants
-            let t = match variant.as_ref() {
-                ast::Declaration::Complete(_, _) => None,
-                ast::Declaration::OnlyType(_) => None,
-                ast::Declaration::OnlyValue(v, _) => {
-                    make_tokens_of_ast(v, type_table, tokens);
-
-                    v.2.clone()
-                }
+        Declaration((_, span), _, ty, _, value) => {
+            let t = if let Some(_ty) = ty {
+                // make_tokens_of_ast(ty, type_table, tokens);
+                todo!() // FIXME support type hints
+            } else if let Some(value) = value {
+                make_tokens_of_ast(value, type_table, tokens);
+                value.2.clone()
+            } else {
+                unreachable!()
             };
+
             if let Type::Fn(_, _) = Inferer::get_most_concrete_type(&t.unwrap(), type_table) {
                 tokens.push((SemanticTokenType::FUNCTION, span.clone()))
             } else {

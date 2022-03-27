@@ -145,7 +145,6 @@ impl LanguageServer for Backend {
             return Ok(None);
         };
 
-        // TODO add the tokens corresponding to comments some how
         let mut tokens = Vec::new();
         for node in &ast {
             make_tokens_of_ast(node, &type_table, &mut tokens);
