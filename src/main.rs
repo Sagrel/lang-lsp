@@ -149,7 +149,7 @@ impl LanguageServer for Backend {
         for node in &ast {
             make_tokens_of_ast(node, &type_table, &mut tokens);
         }
-        // TODO make_tokens_semantic relies on the tokens being ordered. Fix that some how
+        // SPEED make_tokens_semantic relies on the tokens being ordered. Fix that some how
         tokens.sort_by(|(_, a), (_, b)| a.start.cmp(&b.start));
         let semantic_tokens = make_tokens_semantic(&tokens, &rope);
 
