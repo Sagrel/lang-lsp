@@ -11,6 +11,7 @@ pub const LEGEND_TYPE: &[SemanticTokenType] = &[
     SemanticTokenType::KEYWORD,
     SemanticTokenType::OPERATOR,
     SemanticTokenType::PARAMETER,
+    SemanticTokenType::ENUM_MEMBER,
 ];
 
 pub fn make_tokens_semantic(
@@ -63,7 +64,7 @@ pub fn make_tokens_of_ast(
 
     match &node.0 {
         Error => (),
-        Literal((Bool(_), span)) => tokens.push((SemanticTokenType::KEYWORD, span.clone())),
+        Literal((Bool(_), span)) => tokens.push((SemanticTokenType::ENUM_MEMBER, span.clone())),
         Literal((Number(_), span)) => tokens.push((SemanticTokenType::NUMBER, span.clone())),
         Literal((Text(_), span)) => tokens.push((SemanticTokenType::STRING, span.clone())),
         Variable((Ident(_), span)) => {
@@ -98,9 +99,13 @@ pub fn make_tokens_of_ast(
                 make_tokens_of_ast(arg, type_table, tokens);
             }
         }
-        Binary(l, (_, span), r) => {
+        Binary(l, (Token::Op(name), span), r) => {
             make_tokens_of_ast(l, type_table, tokens);
-            tokens.push((SemanticTokenType::OPERATOR, span.clone()));
+            let tk_ty = match name.as_str() {
+                "and" | "or" | "not" => SemanticTokenType::KEYWORD,
+                _ => SemanticTokenType::OPERATOR
+            };
+            tokens.push((tk_ty, span.clone()));
             make_tokens_of_ast(r, type_table, tokens);
         }
         Ast::While((_, span), cond, body) => {

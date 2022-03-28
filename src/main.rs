@@ -47,18 +47,19 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::FULL,
                 )),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
+                
                 // Configuramos los colorcitos de los tokens
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
                         SemanticTokensRegistrationOptions {
                             text_document_registration_options: {
                                 TextDocumentRegistrationOptions {
-                                    // Queremos que funcione en los archivos terminados en "language"?
-                                    document_selector: Some(vec![DocumentFilter {
+                                    // Si ponemos None se usa el que especificamos en el cliente
+                                    document_selector: None/* Some(vec![DocumentFilter {
                                         language: Some("lang".to_string()),
                                         scheme: Some("file".to_string()),
                                         pattern: None,
-                                    }]),
+                                    }]) */,
                                 }
                             },
                             // Decimos los tipos de tokens que vamos a proporcionar

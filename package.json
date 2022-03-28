@@ -20,14 +20,15 @@
     "languages": [
       {
         "id": "lang",
-        "extensions": [".lang"]
+        "extensions": [".lang"],
+        "configuration": "./language-configuration.json"
       }
     ],
     "configuration": {
       "type": "object",
       "title": "lang-lsp",
       "properties": {
-        "lang-lap.server": {
+        "lang-lsp.server": {
           "type": "string",
           "scope": "window",
           "enum": [
