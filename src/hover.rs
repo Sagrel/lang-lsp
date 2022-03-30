@@ -94,7 +94,10 @@ pub fn find_match((node, node_span, node_ty): &Anotated<Ast>, pos: usize) -> Opt
                 }
                 node_ty.clone()
             }
-            Ast::Coment(_) => None, // TODO this still makes the pop up say Type: ()
+            // TODO this still makes the pop up say Type: ()
+            Ast::Coment(_) => None,
+            // TODO
+            Ast::Type(_) => None, 
         }
     } else {
         None

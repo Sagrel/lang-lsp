@@ -4,6 +4,7 @@ use tower_lsp::lsp_types::{SemanticToken, SemanticTokenType};
 
 pub const LEGEND_TYPE: &[SemanticTokenType] = &[
     SemanticTokenType::FUNCTION,
+    SemanticTokenType::TYPE,
     SemanticTokenType::VARIABLE,
     SemanticTokenType::STRING,
     SemanticTokenType::COMMENT,
@@ -59,15 +60,16 @@ pub fn make_tokens_of_ast(
     type_table: &[Type],
     tokens: &mut Vec<Spanned<SemanticTokenType>>,
 ) {
-    use Ast::*;
     use Token::*;
 
     match &node.0 {
-        Error => (),
-        Literal((Bool(_), span)) => tokens.push((SemanticTokenType::ENUM_MEMBER, span.clone())),
-        Literal((Number(_), span)) => tokens.push((SemanticTokenType::NUMBER, span.clone())),
-        Literal((Text(_), span)) => tokens.push((SemanticTokenType::STRING, span.clone())),
-        Variable((Ident(_), span)) => {
+        Ast::Error => (),
+        Ast::Literal((Bool(_), span)) => {
+            tokens.push((SemanticTokenType::ENUM_MEMBER, span.clone()))
+        }
+        Ast::Literal((Number(_), span)) => tokens.push((SemanticTokenType::NUMBER, span.clone())),
+        Ast::Literal((Text(_), span)) => tokens.push((SemanticTokenType::STRING, span.clone())),
+        Ast::Variable((Ident(_), span)) => {
             if let Type::Fn(_, _) =
                 Inferer::get_most_concrete_type(node.2.as_ref().unwrap(), type_table)
             {
@@ -76,34 +78,49 @@ pub fn make_tokens_of_ast(
                 tokens.push((SemanticTokenType::VARIABLE, span.clone()))
             }
         }
-        Declaration((_, span), _, ty, _, value) => {
-            let t = if let Some(_ty) = ty {
-                // make_tokens_of_ast(ty, type_table, tokens);
-                todo!() // FIXME support type hints
-            } else if let Some(value) = value {
-                make_tokens_of_ast(value, type_table, tokens);
-                value.2.clone()
-            } else {
-                unreachable!()
+        Ast::Declaration((_, span), _, ty, _, value) => {
+            let t = match (ty, value) {
+                (Some(ty), None) => {
+                    if let (Ast::Type(t), span, _) = ty.as_ref() {
+                        tokens.push((SemanticTokenType::TYPE, span.clone()));
+                        t.clone()
+                    } else {
+                        unreachable!()
+                    }
+                }
+                (None, Some(value)) => {
+                    make_tokens_of_ast(value, type_table, tokens);
+                    value.2.clone().unwrap()
+                }
+                (Some(ty), Some(value)) => {
+                    make_tokens_of_ast(value, type_table, tokens);
+                    if let (Ast::Type(t), span, _) = ty.as_ref() {
+                        tokens.push((SemanticTokenType::TYPE, span.clone()));
+                        t.clone()
+                    } else {
+                        value.2.clone().unwrap()
+                    }
+                }
+                _ => unreachable!()
             };
 
-            if let Type::Fn(_, _) = Inferer::get_most_concrete_type(&t.unwrap(), type_table) {
+            if let Type::Fn(_, _) = Inferer::get_most_concrete_type(&t, type_table) {
                 tokens.push((SemanticTokenType::FUNCTION, span.clone()))
             } else {
                 tokens.push((SemanticTokenType::VARIABLE, span.clone()))
             }
         }
-        Call(caller, args) => {
+        Ast::Call(caller, args) => {
             make_tokens_of_ast(caller, type_table, tokens);
             for arg in args {
                 make_tokens_of_ast(arg, type_table, tokens);
             }
         }
-        Binary(l, (Token::Op(name), span), r) => {
+        Ast::Binary(l, (Token::Op(name), span), r) => {
             make_tokens_of_ast(l, type_table, tokens);
             let tk_ty = match name.as_str() {
                 "and" | "or" | "not" => SemanticTokenType::KEYWORD,
-                _ => SemanticTokenType::OPERATOR
+                _ => SemanticTokenType::OPERATOR,
             };
             tokens.push((tk_ty, span.clone()));
             make_tokens_of_ast(r, type_table, tokens);
@@ -122,24 +139,24 @@ pub fn make_tokens_of_ast(
             }
             make_tokens_of_ast(else_body, type_table, tokens);
         }
-        Tuple(args) => {
+        Ast::Tuple(args) => {
             for arg in args {
                 make_tokens_of_ast(arg, type_table, tokens);
             }
         }
-        Block(args) => {
+        Ast::Block(args) => {
             for arg in args {
                 make_tokens_of_ast(arg, type_table, tokens);
             }
         }
-        Lambda(args, (_, span), body) => {
+        Ast::Lambda(args, (_, span), body) => {
             tokens.push((SemanticTokenType::OPERATOR, span.clone()));
             for arg in args {
                 make_tokens_of_ast(arg, type_table, tokens);
             }
             make_tokens_of_ast(body, type_table, tokens);
         }
-        Coment((_, span)) => {
+        Ast::Coment((_, span)) => {
             tokens.push((SemanticTokenType::COMMENT, span.clone()));
         }
         _ => panic!("Yo WTF?"),
