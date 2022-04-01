@@ -78,36 +78,39 @@ pub fn make_tokens_of_ast(
                 tokens.push((SemanticTokenType::VARIABLE, span.clone()))
             }
         }
-        Ast::Declaration((_, span), _, ty, _, value) => {
-            let t = match (ty, value) {
-                (Some(ty), None) => {
-                    if let (Ast::Type(t), span, _) = ty.as_ref() {
-                        tokens.push((SemanticTokenType::TYPE, span.clone()));
-                        t.clone()
-                    } else {
-                        unreachable!()
-                    }
-                }
-                (None, Some(value)) => {
-                    make_tokens_of_ast(value, type_table, tokens);
-                    value.2.clone().unwrap()
-                }
-                (Some(ty), Some(value)) => {
-                    make_tokens_of_ast(value, type_table, tokens);
-                    if let (Ast::Type(t), span, _) = ty.as_ref() {
-                        tokens.push((SemanticTokenType::TYPE, span.clone()));
-                        t.clone()
-                    } else {
-                        value.2.clone().unwrap()
-                    }
-                }
-                _ => unreachable!()
-            };
+        Ast::Declaration(pattern, _, ty, _, value) => {
+            if let Some(ty) = ty {
+                tokens.push((SemanticTokenType::TYPE, ty.1.clone()));
+            }
 
-            if let Type::Fn(_, _) = Inferer::get_most_concrete_type(&t, type_table) {
-                tokens.push((SemanticTokenType::FUNCTION, span.clone()))
-            } else {
-                tokens.push((SemanticTokenType::VARIABLE, span.clone()))
+            if let Some(value) = value {
+                make_tokens_of_ast(value, type_table, tokens);
+            }
+
+            // This convoluded piece off code just checks if the names correspond to functions or just normal variables and sets the type accordingly
+            check_fn_or_var(pattern, type_table, tokens);
+
+            fn check_fn_or_var(
+                pattern: &Anotated<Pattern>,
+                type_table: &[Type],
+                tokens: &mut Vec<Spanned<SemanticTokenType>>,
+            ) {
+                match &pattern.0 {
+                    Pattern::Var((_, span)) => {
+                        if let Type::Fn(_, _) =
+                            Inferer::get_most_concrete_type(pattern.2.as_ref().unwrap(), type_table)
+                        {
+                            tokens.push((SemanticTokenType::FUNCTION, span.clone()))
+                        } else {
+                            tokens.push((SemanticTokenType::VARIABLE, span.clone()))
+                        }
+                    }
+                    Pattern::Tuple(args) => {
+                        for arg in args {
+                            check_fn_or_var(arg, type_table, tokens)
+                        }
+                    }
+                }
             }
         }
         Ast::Call(caller, args) => {

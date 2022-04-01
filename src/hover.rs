@@ -1,15 +1,37 @@
 use lang_frontend::{
-    ast::{Anotated, Ast},
+    ast::{Anotated, Ast, Pattern},
     types::Type,
 };
+
+fn find_match_pattern(pattern: &Anotated<Pattern>, pos: usize) -> Option<Type> {
+    match &pattern.0 {
+        Pattern::Var((_, name_span)) => {
+            if name_span.contains(&pos) {
+                return pattern.2.clone();
+            }
+        }
+        Pattern::Tuple(args) => {
+            for arg in args {
+                if let Some(t) = find_match_pattern(arg, pos) {
+                    return Some(t);
+                }
+            }
+            if pattern.1.contains(&pos) {
+                return pattern.2.clone();
+            }
+        }
+    }
+    None
+}
 
 pub fn find_match((node, node_span, node_ty): &Anotated<Ast>, pos: usize) -> Option<Type> {
     if node_span.contains(&pos) {
         match &node {
             Ast::Error | Ast::Literal(_) | Ast::Variable(_) => node_ty.clone(),
-            Ast::Declaration((_, name_span), _, ty, _, value) => {
-                if name_span.contains(&pos) {
-                    return node_ty.clone();
+            Ast::Declaration(pattern, _, ty, _, value) => {
+                // FIXME this does not work????
+                if let Some(t) = find_match_pattern(pattern, pos) {
+                    return Some(t);
                 }
 
                 if let Some(ty) = ty {
@@ -97,7 +119,7 @@ pub fn find_match((node, node_span, node_ty): &Anotated<Ast>, pos: usize) -> Opt
             // TODO this still makes the pop up say Type: ()
             Ast::Coment(_) => None,
             // TODO
-            Ast::Type(_) => None, 
+            Ast::Type(_) => None,
         }
     } else {
         None
