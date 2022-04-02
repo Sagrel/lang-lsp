@@ -119,7 +119,7 @@ pub fn find_match((node, node_span, node_ty): &Anotated<Ast>, pos: usize) -> Opt
             // TODO this still makes the pop up say Type: ()
             Ast::Coment(_) => None,
             // TODO
-            Ast::Type(_) => None,
+            Ast::Type(_) => Some(Type::Type),
         }
     } else {
         None
